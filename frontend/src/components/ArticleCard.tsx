@@ -1,5 +1,6 @@
 import React from 'react'
 import { formatDistanceToNow } from 'date-fns'
+import ShareButtons from './ShareButtons'
 
 interface ArticleProps {
   id: string
@@ -34,7 +35,7 @@ export default function ArticleCard({
   const timeAgo = formatDistanceToNow(publishedDate, { addSuffix: true })
 
   return (
-    <article className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden">
+    <article className="bg-white rounded-lg shadow hover:shadow-lg transition-shadow overflow-hidden flex flex-col">
       {/* Article Image */}
       {image && (
         <div className="aspect-video bg-gray-200 overflow-hidden">
@@ -50,7 +51,7 @@ export default function ArticleCard({
       )}
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-4 flex flex-col flex-grow">
         {/* Source & Time */}
         <div className="flex items-center justify-between mb-2">
           <span className="text-xs font-semibold text-blue-600 bg-blue-50 px-2 py-1 rounded">
@@ -67,7 +68,7 @@ export default function ArticleCard({
         </h3>
 
         {/* Description */}
-        <p className="text-sm text-gray-600 line-clamp-3 mb-3">{description}</p>
+        <p className="text-sm text-gray-600 line-clamp-3 mb-3 flex-grow">{description}</p>
 
         {/* Vote Stats */}
         <div className="flex items-center gap-4 mb-3 py-2 border-t border-gray-100">
@@ -79,8 +80,11 @@ export default function ArticleCard({
           </span>
         </div>
 
+        {/* Share Buttons */}
+        <ShareButtons title={title} url={url} articleId={id} />
+
         {/* Actions */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 mt-3">
           <button
             onClick={() => onUpvote?.(id)}
             className="flex-1 px-3 py-2 bg-green-100 text-green-700 text-sm font-medium rounded hover:bg-green-200 transition-colors"

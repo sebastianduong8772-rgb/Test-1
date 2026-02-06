@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react'
+import { useUserPreferences } from './context/UserPreferencesContext'
 import { useNewsData } from './hooks/useNewsData'
 import ArticleList from './components/ArticleList'
+import IndustrySelector from './components/IndustrySelector'
+import MediaSlider from './components/MediaSlider'
 import { formatDistanceToNow } from 'date-fns'
 
 interface VoteState {
@@ -10,12 +13,14 @@ interface VoteState {
   }
 }
 
-export default function App() {
-  const [category, setCategory] = useState('tmt')
-  const [legacyWeight, setLegacyWeight] = useState(50)
+function AppContent() {
+  const { preferences } = useUserPreferences()
   const [votes, setVotes] = useState<VoteState>({})
   const [removedArticles, setRemovedArticles] = useState<Set<string>>(new Set())
-  const { articles, loading, error, refresh, lastRefreshTime } = useNewsData(category, legacyWeight)
+  const { articles, loading, error, refresh, lastRefreshTime } = useNewsData(
+    preferences.category,
+    preferences.legacyWeight
+  )
 
   // Load votes from localStorage on mount
   useEffect(() => {
@@ -108,46 +113,8 @@ export default function App() {
         {/* Filters Panel */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Category Selector */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                📂 Industry Category
-              </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="tmt">🌐 TMT (Tech/Media/Telecom)</option>
-                <option value="fintech">💰 Fintech</option>
-                <option value="healthcare">🏥 Healthcare</option>
-                <option value="manufacturing">🏭 Manufacturing</option>
-                <option value="retail">🛍️ Retail</option>
-                <option value="media">📺 Media</option>
-                <option value="automotive">🚗 Automotive</option>
-                <option value="energy">⚡ Energy</option>
-              </select>
-            </div>
-
-            {/* Media Age Slider */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                🎭 Media Balance: {legacyWeight < 35 ? 'New Age' : legacyWeight > 65 ? 'Legacy' : 'Balanced'}
-              </label>
-              <div className="flex items-center gap-4">
-                <span className="text-xs text-gray-600 min-w-fit">📰 Legacy</span>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={legacyWeight}
-                  onChange={(e) => setLegacyWeight(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="text-xs text-gray-600 min-w-fit">New Age 🚀</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">{legacyWeight}% Legacy / {100 - legacyWeight}% New Age</p>
-            </div>
+            <IndustrySelector />
+            <MediaSlider />
           </div>
         </div>
 
@@ -172,3 +139,5 @@ export default function App() {
     </div>
   )
 }
+
+export default AppContent
