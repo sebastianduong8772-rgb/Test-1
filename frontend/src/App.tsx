@@ -1,17 +1,158 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { useUserPreferences } from './context/UserPreferencesContext'
+import { useNewsData } from './hooks/useNewsData'
+import ArticleList from './components/ArticleList'
+import IndustrySelector from './components/IndustrySelector'
+import MediaSlider from './components/MediaSlider'
+import { formatDistanceToNow } from 'date-fns'
 
-export default function App() {
+interface VoteState {
+  [articleId: string]: {
+    upvotes: number
+    downvotes: number
+  }
+}
+
+function AppContent() {
+  const { preferences } = useUserPreferences()
+  const [votes, setVotes] = useState<VoteState>({})
+  const [removedArticles, setRemovedArticles] = useState<Set<string>>(new Set())
+  const { articles, loading, error, refresh, lastRefreshTime } = useNewsData(
+    preferences.category,
+    preferences.legacyWeight
+  )
+
+  // Load votes from localStorage on mount
+  useEffect(() => {
+    const savedVotes = localStorage.getItem('articleVotes')
+    const savedRemoved = localStorage.getItem('removedArticles')
+
+    if (savedVotes) {
+      try {
+        const parsedVotes = JSON.parse(savedVotes)
+        if (typeof parsedVotes === 'object' && parsedVotes !== null) {
+          setVotes(parsedVotes)
+        }
+      } catch (error) {
+        console.error('Failed to parse articleVotes from localStorage:', error)
+      }
+    }
+
+    if (savedRemoved) {
+      try {
+        const parsedRemoved = JSON.parse(savedRemoved)
+        if (Array.isArray(parsedRemoved)) {
+          setRemovedArticles(new Set(parsedRemoved))
+        }
+      } catch (error) {
+        console.error('Failed to parse removedArticles from localStorage:', error)
+      }
+    }
+  }, [])
+
+  // Save votes to localStorage
+  useEffect(() => {
+    localStorage.setItem('articleVotes', JSON.stringify(votes))
+  }, [votes])
+
+  // Save removed articles to localStorage
+  useEffect(() => {
+    localStorage.setItem('removedArticles', JSON.stringify(Array.from(removedArticles)))
+  }, [removedArticles])
+
+  const handleUpvote = (id: string) => {
+    setVotes((prev) => ({
+      ...prev,
+      [id]: {
+        upvotes: (prev[id]?.upvotes || 0) + 1,
+        downvotes: prev[id]?.downvotes || 0,
+      },
+    }))
+  }
+
+  const handleDownvote = (id: string) => {
+    setVotes((prev) => ({
+      ...prev,
+      [id]: {
+        upvotes: prev[id]?.upvotes || 0,
+        downvotes: (prev[id]?.downvotes || 0) + 1,
+      },
+    }))
+  }
+
+  const handleRemove = (id: string) => {
+    setRemovedArticles((prev) => new Set([...prev, id]))
+  }
+
+  // Filter articles by removal and sort by upvotes
+  const filteredArticles = articles
+    .filter((article) => !removedArticles.has(article.id))
+    .sort((a, b) => {
+      const aVotes = votes[a.id]?.upvotes || 0
+      const bVotes = votes[b.id]?.upvotes || 0
+      return bVotes - aVotes
+    })
+
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto py-6 px-4">
-          <h1 className="text-3xl font-bold text-gray-900">Tech News</h1>
-          <p className="text-sm text-gray-600 mt-1">Latest news from top tech publications</p>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900">📰 Tech News</h1>
+              <p className="text-sm text-gray-600 mt-1">Latest news from top tech publications</p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={refresh}
+                disabled={loading}
+                className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+              >
+                🔄 Refresh
+              </button>
+            </div>
+          </div>
+
+          {/* Last Refresh Time */}
+          {lastRefreshTime && (
+            <p className="text-xs text-gray-500 mt-3">
+              Last refreshed: {formatDistanceToNow(lastRefreshTime, { addSuffix: true })}
+            </p>
+          )}
         </div>
       </header>
-      <main className="max-w-7xl mx-auto py-12 px-4">
-        <p className="text-gray-600">Loading...</p>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto py-8 px-4">
+        {/* Filters Panel */}
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <IndustrySelector />
+            <MediaSlider />
+          </div>
+        </div>
+
+        {/* Articles Grid */}
+        <ArticleList
+          articles={filteredArticles}
+          loading={loading}
+          error={error}
+          onUpvote={handleUpvote}
+          onDownvote={handleDownvote}
+          onRemove={handleRemove}
+          votes={votes}
+        />
       </main>
+
+      {/* Footer */}
+      <footer className="bg-white border-t border-gray-200 py-6 px-4 mt-12">
+        <div className="max-w-7xl mx-auto text-center text-sm text-gray-600">
+          <p>Powered by NewsAPI.org | No paywalled content | {filteredArticles.length} articles currently displayed</p>
+        </div>
+      </footer>
     </div>
   )
 }
+
+export default AppContent
