@@ -28,10 +28,25 @@ function AppContent() {
     const savedRemoved = localStorage.getItem('removedArticles')
 
     if (savedVotes) {
-      setVotes(JSON.parse(savedVotes))
+      try {
+        const parsedVotes = JSON.parse(savedVotes)
+        if (typeof parsedVotes === 'object' && parsedVotes !== null) {
+          setVotes(parsedVotes)
+        }
+      } catch (error) {
+        console.error('Failed to parse articleVotes from localStorage:', error)
+      }
     }
+
     if (savedRemoved) {
-      setRemovedArticles(new Set(JSON.parse(savedRemoved)))
+      try {
+        const parsedRemoved = JSON.parse(savedRemoved)
+        if (Array.isArray(parsedRemoved)) {
+          setRemovedArticles(new Set(parsedRemoved))
+        }
+      } catch (error) {
+        console.error('Failed to parse removedArticles from localStorage:', error)
+      }
     }
   }, [])
 
