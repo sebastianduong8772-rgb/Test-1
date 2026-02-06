@@ -26,7 +26,7 @@ export function useNewsData(category: string, legacyWeight: number): UseNewsData
   const [error, setError] = useState<string | null>(null)
   const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null)
 
-  const fetchArticles = async () => {
+  const fetchArticles = async (signal?: AbortSignal) => {
     setLoading(true)
     setError(null)
 
@@ -36,6 +36,7 @@ export function useNewsData(category: string, legacyWeight: number): UseNewsData
           category,
           legacyWeight,
         },
+        signal,
       })
 
       if (response.data.success) {
@@ -45,6 +46,11 @@ export function useNewsData(category: string, legacyWeight: number): UseNewsData
         setError(response.data.error || 'Failed to fetch articles')
       }
     } catch (err) {
+      // Ignore cancelled requests
+      if (axios.isAxiosError(err) && err.code === 'ERR_CANCELED') {
+        return
+      }
+
       const message = axios.isAxiosError(err)
         ? err.response?.data?.error || err.message
         : 'Failed to fetch articles'
@@ -56,7 +62,12 @@ export function useNewsData(category: string, legacyWeight: number): UseNewsData
 
   // Fetch on mount and when filters change
   useEffect(() => {
-    fetchArticles()
+    const controller = new AbortController()
+    fetchArticles(controller.signal)
+
+    return () => {
+      controller.abort()
+    }
   }, [category, legacyWeight])
 
   return {
